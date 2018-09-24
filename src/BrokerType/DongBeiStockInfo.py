@@ -166,13 +166,18 @@ class DongBeiStockInfo(AbstractStockInfo):
                 self.all_stock_info[tmp_stock['sec_code']] = tmp_stock
         #查询原有持仓
         old_position = DbControler.query_user_position(self.user_id)
+        #荡有原有持仓情况下需要先处理原有持仓情况
         if old_position:
+            #查出当前用户持仓的新股票
             new_position = list(set(self.stock_list).difference(set(old_position)))
+            #查出登录持仓用户的原有股票
             same_position = list(set(self.stock_list).intersection(set(old_position)))
-            #更新旧的持仓
+            #查出已经交易的不含的持仓股票
             delete_position = list(set(old_position).difference(self.stock_list))
+            #删除没有额持仓
             if delete_position:
                 DbControler.delete_old_position(self.user_id,delete_position)
+            #插入新持仓
             if new_position:
                  #更新新的持仓（插入新的词条）
                 new_stock_info_list = []
@@ -193,6 +198,7 @@ class DongBeiStockInfo(AbstractStockInfo):
                 #执行数据库操作
                 #加入新的持仓
                 DbControler.insert_position_table(new_stock_info_list, self.user_id)
+            #对原有的持仓进行数据更新
             if same_position:
                 modified_stock_info_list = []
                 for code in same_position:
@@ -210,7 +216,8 @@ class DongBeiStockInfo(AbstractStockInfo):
                     modified_stock_info_list.append(out_stock)           
                 #修改原有持仓
                 DbControler.update_position_table(modified_stock_info_list, self.user_id)
-            #删除相应的旧持仓
+
+        #在没有持仓的情况为新用户 创建持仓        
         else:
             stock_info_list = [] 
             for code in self.stock_list:
@@ -227,7 +234,7 @@ class DongBeiStockInfo(AbstractStockInfo):
                 out_stock['po_PLRatio'] = self.all_stock_info[code]['sec_rpl_ratio']
                 stock_info_list.append(out_stock)
             DbControler.insert_position_table(stock_info_list,self.user_id)        
-        
+        #控制台输出
         print("updated position table")
         logging.debug("updated position table")
 
